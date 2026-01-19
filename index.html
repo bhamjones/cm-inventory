@@ -20,6 +20,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // PASTE YOUR URL BELOW
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzV9paHy0JcKpnPYHSsjqsuKPWykw_N6Bs6kIFhi3G1MyxD2rk4lDsMPXp63bn-9qAK2Q/exec';
 
         function App() {
@@ -82,7 +83,7 @@
                 }
             };
 
-            if (loading) return <div className="p-10 text-center text-gray-500 font-sans">Loading Master List...</div>;
+            if (loading) return <div className="p-10 text-center text-gray-500 font-sans tracking-wide">Fetching Master List...</div>;
 
             return (
                 <div className="max-w-md mx-auto bg-white shadow-lg min-h-screen flex flex-col font-sans">
@@ -98,33 +99,39 @@
                             <div>To Order</div>
                         </div>
 
-                        {items.map((item, idx) => (
-                            <div key={idx} className="grid grid-cols-4 items-center border-b item-row min-h-[3.5rem]">
-                                <input 
-                                    type="text" 
-                                    placeholder="—"
-                                    className="w-full h-full text-center border-r bg-transparent outline-none focus:bg-indigo-50"
-                                    value={inventory[item]?.onHand || ''}
-                                    onChange={(e) => updateValue(item, 'onHand', e.target.value)}
-                                />
-                                <div className="col-span-2 px-2 text-sm text-center leading-tight text-gray-800 font-medium break-words">
-                                    {item}
+                        {items.map((item, idx) => {
+                            // RENDER SECTION BREAK IF ITEM IS BLANK
+                            if (!item || item.trim() === "") {
+                                return <div key={idx} className="h-6 bg-gray-200 border-b border-t border-gray-300 shadow-inner"></div>;
+                            }
+                            return (
+                                <div key={idx} className="grid grid-cols-4 items-center border-b item-row min-h-[3.5rem]">
+                                    <input 
+                                        type="text" 
+                                        placeholder="—"
+                                        className="w-full h-full text-center border-r bg-transparent outline-none focus:bg-indigo-50"
+                                        value={inventory[item]?.onHand || ''}
+                                        onChange={(e) => updateValue(item, 'onHand', e.target.value)}
+                                    />
+                                    <div className="col-span-2 px-2 text-sm text-center leading-tight text-gray-800 font-medium break-words">
+                                        {item}
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="—"
+                                        className="w-full h-full text-center border-l bg-transparent outline-none focus:bg-indigo-50"
+                                        value={inventory[item]?.toOrder || ''}
+                                        onChange={(e) => updateValue(item, 'toOrder', e.target.value)}
+                                    />
                                 </div>
-                                <input 
-                                    type="text" 
-                                    placeholder="—"
-                                    className="w-full h-full text-center border-l bg-transparent outline-none focus:bg-indigo-50"
-                                    value={inventory[item]?.toOrder || ''}
-                                    onChange={(e) => updateValue(item, 'toOrder', e.target.value)}
-                                />
-                            </div>
-                        ))}
+                            );
+                        })}
 
                         <div className="p-4 bg-gray-50 border-t mt-4">
-                            <label className="block text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-wider">One-Time Items & Notes</label>
+                            <label className="block text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-wider">Miscellaneous Notes</label>
                             <textarea 
-                                className="w-full p-3 border rounded-lg text-sm h-24 shadow-sm outline-none focus:border-indigo-500"
-                                placeholder="e.g. Wipes, Bananas, Check with Kathryn about bread..."
+                                className="w-full p-3 border rounded-lg text-sm h-24 shadow-sm outline-none focus:border-indigo-50"
+                                placeholder="Enter one-time items or general notes here..."
                                 value={notes}
                                 onChange={(e) => updateNotes(e.target.value)}
                             ></textarea>
