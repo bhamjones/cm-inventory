@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CM Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input, textarea { -webkit-appearance: none; border-radius: 0; }
+        .item-row:nth-child(even) { background-color: #f9fafb; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-32">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzV9paHy0JcKpnPYHSsjqsuKPWykw_N6Bs6kIFhi3G1MyxD2rk4lDsMPXp63bn-9qAK2Q/exec';
+
+        function App() {
+            const [items, setItems] = useState([]);
+            const [inventory, setInventory] = useState({});
+            const [notes, setNotes] = useState('');
+            const [loading, setLoading] = useState(true);
+            const [status, setStatus] = useState('');
+
+            useEffect(() => {
+                fetch(`${SCRIPT_URL}?action=getList`)
+                    .then(res => res.json())
+                    .then(data => {
+                        setItems(data);
+                        const savedInv = localStorage.getItem('cm_current_inv');
+                        const savedNotes = localStorage.getItem('cm_current_notes');
+                        if (savedInv) setInventory(JSON.parse(savedInv));
+                        if (savedNotes) setNotes(savedNotes);
+                        setLoading(false);
+                    });
+            }, []);
+
+            const updateValue = (itemName, column, value) => {
+                const newInv = { ...inventory, [itemName]: { ...inventory[itemName], [column]: value } };
+                setInventory(newInv);
+                localStorage.setItem('cm_current_inv', JSON.stringify(newInv));
+            };
+
+            const updateNotes = (val) => {
+                setNotes(val);
+                localStorage.setItem('cm_current_notes', val);
+            };
+
+            const submitInventory = () => {
+                setStatus('Sending...');
+                const payload = {
+                    items: items.map(name => ({
+                        name: name,
+                        onHand: inventory[name]?.onHand || '',
+                        toOrder: inventory[name]?.toOrder || ''
+                    })),
+                    notes: notes
+                };
+
+                fetch(SCRIPT_URL + '?action=submit', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    setStatus('✓ Logged to Sheet');
+                    setTimeout(() => setStatus(''), 3000);
+                });
+            };
+
+            const clearList = () => {
+                if(confirm("Clear all numbers and notes to start a new list?")) {
+                    setInventory({});
+                    setNotes('');
+                    localStorage.removeItem('cm_current_inv');
+                    localStorage.removeItem('cm_current_notes');
+                }
+            };
+
+            if (loading) return <div className="p-10 text-center text-gray-500 font-sans">Loading Master List...</div>;
+
+            return (
+                <div className="max-w-md mx-auto bg-white shadow-lg min-h-screen flex flex-col font-sans">
+                    <div className="bg-indigo-700 text-white p-4 sticky top-0 z-10 flex justify-between items-center shadow-md">
+                        <h1 className="font-bold uppercase tracking-tight">CM Inventory</h1>
+                        <button onClick={clearList} className="text-xs bg-indigo-800 px-3 py-1 rounded-full border border-indigo-400">New List</button>
+                    </div>
+
+                    <div className="flex-1">
+                        <div className="grid grid-cols-4 bg-gray-100 text-[10px] uppercase font-bold text-center py-3 sticky top-[56px] z-10 border-b text-gray-500 tracking-wider">
+                            <div>On Hand</div>
+                            <div className="col-span-2 text-indigo-700">Item Name</div>
+                            <div>To Order</div>
+                        </div>
+
+                        {items.map((item, idx) => (
+                            <div key={idx} className="grid grid-cols-4 items-center border-b item-row min-h-[3.5rem]">
+                                <input 
+                                    type="text" 
+                                    placeholder="—"
+                                    className="w-full h-full text-center border-r bg-transparent outline-none focus:bg-indigo-50"
+                                    value={inventory[item]?.onHand || ''}
+                                    onChange={(e) => updateValue(item, 'onHand', e.target.value)}
+                                />
+                                <div className="col-span-2 px-2 text-sm text-center leading-tight text-gray-800 font-medium break-words">
+                                    {item}
+                                </div>
+                                <input 
+                                    type="text" 
+                                    placeholder="—"
+                                    className="w-full h-full text-center border-l bg-transparent outline-none focus:bg-indigo-50"
+                                    value={inventory[item]?.toOrder || ''}
+                                    onChange={(e) => updateValue(item, 'toOrder', e.target.value)}
+                                />
+                            </div>
+                        ))}
+
+                        <div className="p-4 bg-gray-50 border-t mt-4">
+                            <label className="block text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-wider">One-Time Items & Notes</label>
+                            <textarea 
+                                className="w-full p-3 border rounded-lg text-sm h-24 shadow-sm outline-none focus:border-indigo-500"
+                                placeholder="e.g. Wipes, Bananas, Check with Kathryn about bread..."
+                                value={notes}
+                                onChange={(e) => updateNotes(e.target.value)}
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t flex items-center justify-center">
+                        <button 
+                            onClick={submitInventory}
+                            className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl active:scale-95 transition-all"
+                        >
+                            {status || 'Submit Inventory'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
